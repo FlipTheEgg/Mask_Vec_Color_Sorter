@@ -1,4 +1,4 @@
-PImage img;
+PImage img; //<>//
 boolean running;
 int iterations;
 String imgString;
@@ -9,18 +9,16 @@ int yOffset;
 // We check for out of bounds in one sense, bot not L-R. This causes assymetry.
 void setup() {
 
-  imgString = "image.jpg";
+  imgString = "fall.jpg";
   // fall, image, cover, glacier, nasa
 
   img = loadImage(imgString);
 
   // Set the rotational center of polar coordinates relative to the cartesian coordinates.
-  int xOffset = img.width / 2;
-  int yOffset = img.height / 2;
+  xOffset = img.width / 2;
+  yOffset = img.height / 2;
   println("xOffset: " + xOffset);
   println("yOffset: " + yOffset);
-
-  translate(xOffset, yOffset);
 
   size(100, 100);
   surface.setResizable(true);
@@ -28,15 +26,19 @@ void setup() {
   println("width: " + img.width + " Height: " + img.height + " Total: " + img.width*img.height);
   running = false;
   iterations = 1;
+  
+  
 }
 
 void draw() {
   background(0);
-  image(img, -xOffset, -yOffset); //Corrected for the offset
+  image(img, 0, 0);
   if (running) {
-
-    maskPolSort("000000FF", 1, 0);
-
+    // NOTE PolSort behaves weirdly for 0-vectors :)
+    
+    PolarCoordinate cord = new PolarCoordinate(-3,0.1);
+    maskPolSort("0000FFFF", cord);
+    maskVecSort("00FFFF00", 3, 1, false);
 
     //maskVecMove(2,4,"000F0FFF");
 
@@ -67,11 +69,11 @@ void draw() {
 
     /*
     iterations++;
-    maskSort(hex(iterations), false, true);
-    maskSort(hex(iterations<<5), true, false);
-    maskSort(hex(iterations<<11), false, false);
-    maskSort(hex(iterations<<16), true, true);
-    */
+     maskSort(hex(iterations), false, true);
+     maskSort(hex(iterations<<5), true, false);
+     maskSort(hex(iterations<<11), false, false);
+     maskSort(hex(iterations<<16), true, true);
+     */
 
     // Necessary, updates the image
     img.updatePixels();
@@ -91,6 +93,26 @@ void keyPressed() {
   } else if (key == 'r') {
     img = loadImage(imgString);
   }
+}
+
+CartesianCoordinate PolarToCartesian(PolarCoordinate cord) {
+
+  CartesianCoordinate result = new CartesianCoordinate();
+
+  result.x = int(cord.radius * cos(cord.angle)) + xOffset;
+  result.y = int(cord.radius * sin(cord.angle)) + yOffset;
+  return result;
+}
+
+PolarCoordinate CartesianToPolar(CartesianCoordinate cord) {
+  CartesianCoordinate coordinate = new CartesianCoordinate(cord.x - xOffset, cord.y - yOffset);
+
+  PolarCoordinate result = new PolarCoordinate();
+  result.radius = sqrt((coordinate.x*coordinate.x) + (coordinate.y*coordinate.y));
+  result.angle = atan2(coordinate.y, coordinate.x);
+
+  //OBS! atan2
+  return result;
 }
 
 int GetNewIndex()
@@ -181,11 +203,11 @@ void maskVecSort(String maskString, int vecX, int vecY, boolean dir) {
 
 // What is the unit of aVec? I think it's currently radians.
 
-void maskPolSort(String maskString, int rVec, int aVec) {
+void maskPolSort(String maskString, PolarCoordinate vec) {
   int pixelA;
   int pixelB;
 
-  int mask = unhex(maskString); //<>//
+  int mask = unhex(maskString);
 
   int w = img.width;
   int h = img.height;
@@ -193,60 +215,36 @@ void maskPolSort(String maskString, int rVec, int aVec) {
   //Go through the image pixel by pixel
   for (int i=0; i<(h*w); i++) {
     // index of A and B in img
-    int iA, iB;
-
-    // Cartesian coordinates of A and B
-    int xA, yA, xB, yB;
-
-    // Polar coordinates of A and B
-    float rA, aA, rB, aB;
+    int iA, iB; //<>//
+    
+    CartesianCoordinate A_c, B_c;
+    PolarCoordinate A_p;
 
     iA = i;
 
     // Cartesian coordinate of A
-    xA = iA % w;
-    yA = iA / w;
+    A_c = IndexToCartesian(iA);
 
     // Polar coordinate of A
-    rA = sqrt(xA^2 + yA^2);
-    aA = atan2(yA, xA);
+    A_p = CartesianToPolar(A_c);
 
-    // Add only the radius:
-    rB = rA + rVec;
-    aB = aA;
+    PolarCoordinate B_p = A_p.add(vec);
 
-    xB = int(rB * cos(aB));
-    yB = int(rB * sin(aB));
+    B_c = PolarToCartesian(B_p);
 
-    //This is to check for OOB
+    
+    CartesianCoordinate B_cb = GetCoordinateInBounds_wrap(B_c);
 
-    // Add the angle
-    aB = aA + aVec;
-
-    xB = int(rB * cos(aB));
-    yB = int(rB * sin(aB));
-
-    //Is there a case where it rotates completely out?
-    for (int j=0; j<4; j++) { //If it rotates four times it's just fucked.
-      // If out of bounds
-      if (xB>w || xB<0 || yB>h || yB<0) {
-        if (rVec>0) {
-          aB += HALF_PI;
-        } else if (rVec<0) {
-          aB -= HALF_PI;
-        } else {
-          println("Your OOB calculation is fucked!");
-        }
-        xB = int(rB * cos(aB));
-        yB = int(rB * sin(aB));
-      } else break;
-    }
-
-    iB = (yB * w) + xB;
+    iB = CartesianToIndex(B_cb);
 
     pixelA = img.pixels[iA];
-    pixelB = img.pixels[iB];
-
+    //println(B_c);
+    //println(B_cb);
+    pixelB = img.pixels[iB]; ////
+   //img.pixels[iA] = pixelB;
+   //img.pixels[iB] = pixelA;
+    
+   
     pixelA &= mask;
     pixelB &= mask;
 
@@ -257,35 +255,8 @@ void maskPolSort(String maskString, int rVec, int aVec) {
       img.pixels[iB] &= ~mask;
       img.pixels[iB] |= pixelA;
     }
-  }
-}
-
-//Direction, orientation.
-void maskSort(String maskString, boolean dir, boolean or) {
-
-  int pixelA;
-  int pixelB;
-
-  int mask = unhex(maskString);
-
-  int w = img.width;
-  int h = img.height;
-
-  //Go through the image by columns
-  for (int x=0; x<w; x++) {
-    //Go through the column
-    for (int y= or ? 0 : h-2; or ? y<h-2 : y>0; y += or ? 1 : -1) {
-
-      pixelA = (dir ? img.pixels[w*y+x] : img.pixels[w*(y+1)+x]) & mask;
-      pixelB = (dir ? img.pixels[w*(y+1)+x] : img.pixels[w*y+x]) & mask;
-
-      if (pixelA > pixelB) {
-        img.pixels[w*y+x] &= ~mask;
-        img.pixels[w*(y+1)+x] &= ~mask;
-        img.pixels[w*y+x] |= dir ? pixelB : pixelA;
-        img.pixels[w*(y+1)+x] |= dir ? pixelA : pixelB;
-      }
-    }
+    //println("iA, iB: ", iA, ", ", iB);
+    
   }
 }
 
@@ -296,12 +267,11 @@ boolean maskCompare(int A, int B, String maskString) {
   A &= mask;
   B &= mask;
 
-  if(A > B) return true;
+  if (A > B) return true;
 
   return false;
 
   // Should i make a int-pair class, and move these function into it?
-
 }
 
 // Does A contain more ones than B?
@@ -337,4 +307,32 @@ boolean brightCompare(int A, int B) {
   if (brightnessA > brightnessB) return true;
 
   return false;
+}
+
+CartesianCoordinate GetCoordinateInBounds_wrap(CartesianCoordinate cord) {
+  CartesianCoordinate result = new CartesianCoordinate();
+  int xmax = img.width;
+  int ymax = img.height;
+
+  result.x = cord.x;
+  result.y = cord.y;
+
+  if (result.x < 0) result.x += xmax;
+  if (result.x >= xmax) result.x -= xmax;
+  
+  if (result.y < 0) result.y += ymax;
+  if (result.y >= ymax) result.y -= ymax;
+
+  return result;
+}
+
+int CartesianToIndex(CartesianCoordinate cord){
+  return (cord.y * img.width) + cord.x;
+}
+
+CartesianCoordinate IndexToCartesian(int index){
+    CartesianCoordinate result = new CartesianCoordinate();
+    result.x = index % img.width;
+    result.y = index / img.width;
+    return result;
 }
