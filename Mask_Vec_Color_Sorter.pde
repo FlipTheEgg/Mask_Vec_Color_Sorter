@@ -1,20 +1,19 @@
-PImage img; //<>//
+PImage img; //<>// //<>//
 boolean running;
 int iterations;
 String imgString;
 int xOffset;
 int yOffset;
 
-
-// We check for out of bounds in one sense, bot not L-R. This causes assymetry.
 void setup() {
 
-  imgString = "fall.jpg";
-  // fall, image, cover, glacier, nasa
+  // CHOOSE YOUR IMAGE HERE
+
+  imgString = "empire_small.jpg";
+  // See the "data" folder for available images, or add your own there.
 
   img = loadImage(imgString);
 
-  // Set the rotational center of polar coordinates relative to the cartesian coordinates.
   xOffset = img.width / 2;
   yOffset = img.height / 2;
   println("xOffset: " + xOffset);
@@ -26,53 +25,31 @@ void setup() {
   println("width: " + img.width + " Height: " + img.height + " Total: " + img.width*img.height);
   running = false;
   iterations = 1;
-  
-  
 }
+// SYNTAX:
+// maskVecSort(String maskString, int vecX, int vecY, boolean dir)
+// maskVecMove(String maskString, int vecX, int vecY)
+// maskPolSort(String maskString, PolarCoordinate vec)
+
+// NOTE PolSort behaves weirdly for 0-vectors :)
 
 void draw() {
   background(0);
   image(img, 0, 0);
   if (running) {
-    // NOTE PolSort behaves weirdly for 0-vectors :)
+    // WRITE YOUR SORTS HERE:
     
-    PolarCoordinate cord = new PolarCoordinate(-3,0.1);
-    maskPolSort("0000FFFF", cord);
-    maskVecSort("00FFFF00", 3, 1, false);
+    PolarCoordinate cord1 = new PolarCoordinate(0, -0.04);
+    PolarCoordinate cord2 = new PolarCoordinate(100, 0.5);
+    maskPolSort("00808080", cord1);
+    maskPolSort("00080808", cord2);
 
-    //maskVecMove(2,4,"000F0FFF");
-
-    //maskVecSort("0000FFFF", 2, 2, true);
-    //maskVecSort("00FFFF00", -2, -2, false);
-    //maskVecSort("00FF00FF", -4, -1, false);
-    //maskVecSort("00FFFF00", -6, -2, false);
-    //maskVecSort("00FF0000", 0, -1);
-
-
-    //maskVecSort(img.width/2-1,img.height/2-1,"FFFFFFFF");
-    //maskVecSort(int(random(-10,10)),int(random(-10,10)),hex(int(random(0,16777215))));
-    //maskSort("00FFFF00", false, true);
-    //maskVecSort(-2,4,"000000FF");
-    //maskVecSort(7,-3,"00FF00FF");
-
-    //This one's cool
-    //maskSort("00FFFF00", true, true);
-    //maskSort("0000FFFF", false, false);
-
-    //maskSort("00808080", true, false);
-
-    //Straight chromatic abberation
-    //maskSort("00FF0000", false, false);
-    //maskSort("000000FF", false, true);
-
-    //Weird, never-ending
-
-    /*
-    iterations++;
-     maskSort(hex(iterations), false, true);
-     maskSort(hex(iterations<<5), true, false);
-     maskSort(hex(iterations<<11), false, false);
-     maskSort(hex(iterations<<16), true, true);
+    /* Fun, never ending:
+     iterations++;
+     maskVecSort(hex(iterations), 0,-1, true);
+     maskVecSort(hex(iterations<<5), 0,1, false);
+     maskVecSort(hex(iterations<<11), 0,1, false);
+     maskVecSort(hex(iterations<<16), 0,-1, true);
      */
 
     // Necessary, updates the image
@@ -80,6 +57,7 @@ void draw() {
   }
 }
 
+// INPUT HANDLING
 void keyPressed() {
 
   if (key == ' ') {
@@ -95,67 +73,9 @@ void keyPressed() {
   }
 }
 
-CartesianCoordinate PolarToCartesian(PolarCoordinate cord) {
-
-  CartesianCoordinate result = new CartesianCoordinate();
-
-  result.x = int(cord.radius * cos(cord.angle)) + xOffset;
-  result.y = int(cord.radius * sin(cord.angle)) + yOffset;
-  return result;
-}
-
-PolarCoordinate CartesianToPolar(CartesianCoordinate cord) {
-  CartesianCoordinate coordinate = new CartesianCoordinate(cord.x - xOffset, cord.y - yOffset);
-
-  PolarCoordinate result = new PolarCoordinate();
-  result.radius = sqrt((coordinate.x*coordinate.x) + (coordinate.y*coordinate.y));
-  result.angle = atan2(coordinate.y, coordinate.x);
-
-  //OBS! atan2
-  return result;
-}
-
-int GetNewIndex()
-{
-  return int(random(0, 999999));
-}
-
-void maskVecMove(String maskString, int vecX, int vecY) {
-
-  int pixelA;
-  int pixelB;
-
-  int mask = unhex(maskString);
-
-  int w = img.width;
-  int h = img.height;
-  int max = w*h;
-
-  //Go through the image pixel by pixel
-  for (int x=0; x<(h*w); x++) {
-
-    //Calculating the second pixel.
-
-    int bval = x + vecX + (vecY*w);
-    if (bval < 0) bval += max;
-    if (bval >= max) bval %= max;
-
-    pixelA = img.pixels[x];
-    pixelB = img.pixels[bval];
-
-    pixelA &= mask;
-    pixelB &= mask;
-
-    if (pixelA > pixelB) {
-      img.pixels[x] &= ~mask;
-      img.pixels[x] |= pixelB;
-
-      img.pixels[bval] &= ~mask;
-      img.pixels[bval] |= pixelA;
-    }
-  }
-}
-
+// Sorts masked color values.
+// The vector decides which pixel to compare to when sorting, 
+//  so that you can steer the direction of the sorting
 void maskVecSort(String maskString, int vecX, int vecY, boolean dir) {
 
   int pixelA;
@@ -201,8 +121,47 @@ void maskVecSort(String maskString, int vecX, int vecY, boolean dir) {
   }
 }
 
-// What is the unit of aVec? I think it's currently radians.
+// A wrapping version of maskVecSort. 
+// Since the sorting goes all the way around, it doesn't really bundle the sorted colors anywhere
+// The entire image just moves, hence the name
+void maskVecMove(String maskString, int vecX, int vecY) {
 
+  int pixelA;
+  int pixelB;
+
+  int mask = unhex(maskString);
+
+  int w = img.width;
+  int h = img.height;
+  int max = w*h;
+
+  //Go through the image pixel by pixel
+  for (int x=0; x<(h*w); x++) {
+
+    //Calculating the second pixel.
+    int bval = x + vecX + (vecY*w);
+    if (bval < 0) bval += max;
+    if (bval >= max) bval %= max;
+
+    pixelA = img.pixels[x];
+    pixelB = img.pixels[bval];
+
+    pixelA &= mask;
+    pixelB &= mask;
+
+    if (pixelA > pixelB) {
+      img.pixels[x] &= ~mask;
+      img.pixels[x] |= pixelB;
+
+      img.pixels[bval] &= ~mask;
+      img.pixels[bval] |= pixelA;
+    }
+  }
+}
+
+// Like maskVecSort, but in polar coordinates
+//  This means that you can sort around or towards a point instead of xy
+//  This point is defind by xOffset and yOffset
 void maskPolSort(String maskString, PolarCoordinate vec) {
   int pixelA;
   int pixelB;
@@ -215,36 +174,25 @@ void maskPolSort(String maskString, PolarCoordinate vec) {
   //Go through the image pixel by pixel
   for (int i=0; i<(h*w); i++) {
     // index of A and B in img
-    int iA, iB; //<>//
-    
+    int iA, iB;
+
     CartesianCoordinate A_c, B_c;
     PolarCoordinate A_p;
 
     iA = i;
 
-    // Cartesian coordinate of A
     A_c = IndexToCartesian(iA);
-
-    // Polar coordinate of A
     A_p = CartesianToPolar(A_c);
-
     PolarCoordinate B_p = A_p.add(vec);
-
     B_c = PolarToCartesian(B_p);
-
     
     CartesianCoordinate B_cb = GetCoordinateInBounds_wrap(B_c);
 
     iB = CartesianToIndex(B_cb);
 
     pixelA = img.pixels[iA];
-    //println(B_c);
-    //println(B_cb);
-    pixelB = img.pixels[iB]; ////
-   //img.pixels[iA] = pixelB;
-   //img.pixels[iB] = pixelA;
-    
-   
+    pixelB = img.pixels[iB];
+
     pixelA &= mask;
     pixelB &= mask;
 
@@ -255,10 +203,58 @@ void maskPolSort(String maskString, PolarCoordinate vec) {
       img.pixels[iB] &= ~mask;
       img.pixels[iB] |= pixelA;
     }
-    //println("iA, iB: ", iA, ", ", iB);
-    
   }
 }
+
+CartesianCoordinate PolarToCartesian(PolarCoordinate cord) {
+  CartesianCoordinate result = new CartesianCoordinate();
+  result.x = int(cord.radius * cos(cord.angle)) + xOffset;
+  result.y = int(cord.radius * sin(cord.angle)) + yOffset;
+  return result;
+}
+
+PolarCoordinate CartesianToPolar(CartesianCoordinate cord) {
+  CartesianCoordinate coordinate = new CartesianCoordinate(cord.x - xOffset, cord.y - yOffset);
+  PolarCoordinate result = new PolarCoordinate();
+  result.radius = sqrt((coordinate.x*coordinate.x) + (coordinate.y*coordinate.y));
+  result.angle = atan2(coordinate.y, coordinate.x);
+  return result;
+}
+
+int GetNewIndex() {
+  return int(random(0, 99999999));
+  // Files not overwriting each other secured by faith alone
+}
+
+CartesianCoordinate GetCoordinateInBounds_wrap(CartesianCoordinate cord) {
+  CartesianCoordinate result = new CartesianCoordinate();
+  int xmax = img.width;
+  int ymax = img.height;
+
+  result.x = cord.x;
+  result.y = cord.y;
+
+  if (result.x < 0) result.x += xmax;
+  if (result.x >= xmax) result.x -= xmax;
+
+  if (result.y < 0) result.y += ymax;
+  if (result.y >= ymax) result.y -= ymax;
+
+  return result;
+}
+
+int CartesianToIndex(CartesianCoordinate cord) {
+  return (cord.y * img.width) + cord.x;
+}
+
+CartesianCoordinate IndexToCartesian(int index) {
+  CartesianCoordinate result = new CartesianCoordinate();
+  result.x = index % img.width;
+  result.y = index / img.width;
+  return result;
+}
+
+// UNUSED COMPARISON FUNCTIONS (For future functionality)
 
 // Is A > B?
 boolean maskCompare(int A, int B, String maskString) {
@@ -268,10 +264,7 @@ boolean maskCompare(int A, int B, String maskString) {
   B &= mask;
 
   if (A > B) return true;
-
   return false;
-
-  // Should i make a int-pair class, and move these function into it?
 }
 
 // Does A contain more ones than B?
@@ -307,32 +300,4 @@ boolean brightCompare(int A, int B) {
   if (brightnessA > brightnessB) return true;
 
   return false;
-}
-
-CartesianCoordinate GetCoordinateInBounds_wrap(CartesianCoordinate cord) {
-  CartesianCoordinate result = new CartesianCoordinate();
-  int xmax = img.width;
-  int ymax = img.height;
-
-  result.x = cord.x;
-  result.y = cord.y;
-
-  if (result.x < 0) result.x += xmax;
-  if (result.x >= xmax) result.x -= xmax;
-  
-  if (result.y < 0) result.y += ymax;
-  if (result.y >= ymax) result.y -= ymax;
-
-  return result;
-}
-
-int CartesianToIndex(CartesianCoordinate cord){
-  return (cord.y * img.width) + cord.x;
-}
-
-CartesianCoordinate IndexToCartesian(int index){
-    CartesianCoordinate result = new CartesianCoordinate();
-    result.x = index % img.width;
-    result.y = index / img.width;
-    return result;
 }
