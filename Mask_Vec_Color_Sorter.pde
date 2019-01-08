@@ -66,7 +66,8 @@ void keyPressed() {
     else println("stopped");
   } else if (key == 's') {
     int i = GetNewIndex();
-    img.save("capture" + i + ".png");
+    String savePath = sketchPath() + "/captures/";
+    img.save(savePath + i + ".png");
     println("image saved as capture" + i + ".png");
   } else if (key == 'r') {
     img = loadImage(imgString);
